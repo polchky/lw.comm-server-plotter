@@ -23473,6 +23473,8 @@ var _mesh = __webpack_require__(2);
 //      cutFeed:        Feedrate for horizontal cuts (gcode units)
 //      tabGeometry:    Tab geometry (optional)
 //      tabZ:           Z position over tabs (required if tabGeometry is not empty) (gcode units)
+//      plungeReplace:  Replacement Gcode for plunge operation (used for plotters)
+//      retractReplace: Replacement Gcode for retract operation (used for plotters)
 function getMillGcode(props) {
     let paths = props.paths,
         ramp = props.ramp,
@@ -23489,7 +23491,9 @@ function getMillGcode(props) {
         cutFeed = props.cutFeed,
         tabGeometry = props.tabGeometry,
         tabZ = props.tabZ,
-        toolSpeed = props.toolSpeed;
+        toolSpeed = props.toolSpeed,
+        plungeReplace = props.plungeReplace,
+        retractReplace = props.retractReplace;
 
 
     let plungeFeedGcode = ' F' + plungeFeed;
@@ -23502,7 +23506,9 @@ function getMillGcode(props) {
         tabZ = botZ;
     }
 
-    let retractGcode = '; Retract\r\n' + 'G0 Z' + safeZ.toFixed(decimal) + '\r\n';
+    let retractGcode = retractReplace === ""
+        ? '; Retract\r\n' + 'G0 Z' + safeZ.toFixed(decimal) + '\r\n'
+        : retractReplace;
 
     let retractForTabGcode = '; Retract for tab\r\n' + 'G0 Z' + tabZ.toFixed(decimal) + '\r\n';
 
@@ -23581,7 +23587,11 @@ function getMillGcode(props) {
                                 }
                             }
                         }
-                        if (!executedRamp) gcode += '; plunge\r\n' + 'G1 Z' + selectedZ.toFixed(decimal) + plungeFeedGcode;
+                        if (!executedRamp) {
+                            gcode += plungeReplace === ""
+                                ? '; plunge\r\n' + 'G1 Z' + selectedZ.toFixed(decimal) + plungeFeedGcode
+                                : plungeReplace;
+                        }
                         if (toolSpeed) gcode += ' S' + toolSpeed;
                         gcode += '\r\n';
                     } else if (selectedZ > currentZ) {
@@ -23699,7 +23709,9 @@ function getMillGcodeFromOp(settings, opIndex, op, geometry, openGeometry, tabGe
         cutFeed: op.cutRate * feedScale,
         tabGeometry: op.type === 'Mill V Carve' ? [] : tabGeometry,
         tabZ: -op.tabDepth,
-        toolSpeed: op.toolSpeed
+        toolSpeed: op.toolSpeed,
+        plungeReplace: op.plungeReplace,
+        retractReplace: op.retractReplace
     });
 
     if (op.hookOperationEnd.length) gcode += op.hookOperationEnd;
